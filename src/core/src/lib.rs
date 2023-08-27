@@ -21,7 +21,9 @@ pub fn draw_frame(p: &dyn Platform) {
         },
         rect_size,
         Color { r: 255, g: 0, b: 0 }
-    )
+    );
+
+    g.update();
 }
 
 pub fn entry_point(p: &dyn Platform) {

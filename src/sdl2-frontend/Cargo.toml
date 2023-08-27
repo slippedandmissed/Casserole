@@ -1,0 +1,17 @@
+[package]
+name = "sdl2-frontend"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "casserole"
+path = "src/main.rs"
+
+[dependencies]
+crossbeam = "0.8.2"
+crossbeam-channel = "0.5.8"
+once_cell = "1.18.0"
+sdl2 = "0.35.2"
+
+[dependencies.casserole-core]
+path = "../core"

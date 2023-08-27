@@ -44,5 +44,8 @@ impl GraphicsLibrary for WASMGraphicsLibrary {
     fn get_screen_dimensions(&self) -> casserole_core::graphics::Size {
         return getScreenDimensions().to_native();
     }
+    fn update(&self) {
+        // The screen automatically updates in the canvas
+    }
 }
 pub const GRAPHICS_LIBRARY: WASMGraphicsLibrary = WASMGraphicsLibrary {};
