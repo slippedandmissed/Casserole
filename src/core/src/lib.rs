@@ -1,18 +1,20 @@
 pub mod graphics;
-pub mod js_interop;
 pub mod event_handlers;
 pub mod logging;
+pub mod platform;
 
+use crate::platform::Platform;
 use crate::graphics::*;
-use crate::logging::*;
 
-pub fn draw_frame() {
-    let screen_size = get_screen_dimensions();
-    log(&format!("width: {}, height: {}", screen_size.width, screen_size.height));
+pub fn draw_frame(p: &dyn Platform) {
+    let g = p.graphics();
+    let l = p.logger();
+    let screen_size = g.get_screen_dimensions();
+    l.log(&format!("width: {}, height: {}", screen_size.width, screen_size.height));
     let rect_size = Size { width: 168, height: 100 };
 
-    fill(Color { r: 0, g: 255, b: 255 });
-    fill_rect(
+    g.fill(Color { r: 0, g: 255, b: 255 });
+    g.fill_rect(
         Position {
             x: i32::try_from((screen_size.width - rect_size.width) / 2).unwrap(),
             y: i32::try_from((screen_size.height - rect_size.height) / 2).unwrap(),
@@ -22,6 +24,6 @@ pub fn draw_frame() {
     )
 }
 
-pub fn entry_point() {
-    draw_frame();
+pub fn entry_point(p: &dyn Platform) {
+    draw_frame(p);
 }
