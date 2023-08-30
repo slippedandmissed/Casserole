@@ -7,5 +7,3 @@ impl Logger for WASMLogger {
         js_console::log_1(&msg.into());
     }
 }
-
-pub const LOGGER: WASMLogger = WASMLogger {};

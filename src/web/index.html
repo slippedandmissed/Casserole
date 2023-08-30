@@ -9,7 +9,7 @@
     <canvas id="canvas"></canvas>
     <script type="module">
       import library from "./js/library/index.js";
-      import init, { entry_point, on_window_resize } from "./module/casserole/casserole.js";
+      import init, { entry_point } from "./module/casserole/casserole_wasm.js";
       
       window.library = library;
       
@@ -20,7 +20,6 @@
       window.addEventListener("resize", () => {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        on_window_resize();
       });
 
       init().then(() => {

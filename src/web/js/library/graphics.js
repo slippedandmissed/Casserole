@@ -1,4 +1,4 @@
-import { return_size } from "../../module/casserole/casserole.js";
+import { return_size } from "../../module/casserole/casserole_wasm.js";
 
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
