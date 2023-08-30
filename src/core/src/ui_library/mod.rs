@@ -5,6 +5,8 @@ pub mod list;
 pub mod padding;
 pub mod sized_box;
 
+use derivative::Derivative;
+
 use std::{cell::RefCell, fmt::Debug, rc::Weak};
 
 use crate::{
@@ -21,6 +23,51 @@ pub struct Key {
 
 pub trait KeySegment {
     fn key_segment(&self) -> String;
+}
+
+
+#[derive(Derivative)]
+#[derivative(Debug)]
+pub struct WidgetData {
+    pub key: Option<Key>,
+    #[derivative(Debug="ignore")]
+    pub state_manager: Weak<RefCell<StateManager>>,
+    pub position: Position,
+    pub available_space: Size,
+}
+
+impl WidgetData {
+    pub fn new() -> Self {
+        return Self {
+            key: None,
+            state_manager: Weak::new(),
+            position: Position::origin(),
+            available_space: Size::zero(),
+        };
+    }
+}
+
+#[derive(Derivative)]
+#[derivative(Debug)]
+pub struct CompoundWidgetData {
+    pub key: Option<Key>,
+    #[derivative(Debug="ignore")]
+    pub state_manager: Weak<RefCell<StateManager>>,
+    pub cached_build: Option<Box<dyn Widget>>,
+    pub position: Position,
+    pub available_space: Size,
+}
+
+impl CompoundWidgetData {
+    pub fn new() -> Self {
+        return Self {
+            key: None,
+            state_manager: Weak::new(),
+            cached_build: None,
+            position: Position::origin(),
+            available_space: Size::zero(),
+        };
+    }
 }
 
 pub trait Widget: Debug + KeySegment {
@@ -388,4 +435,91 @@ impl<U: StatefulWidget> CompoundWidget for U {
 
         return handler_info.was_captured;
     }
+}
+
+#[macro_export]
+macro_rules! widget_default_methods {
+    () => {
+        fn get_key(&self) -> &Key {
+            return match &self.widget_data.key {
+                Some(x) => x,
+                None => panic!(),
+            };
+        }
+    
+        fn set_key(&mut self, key: Key) -> () {
+            self.widget_data.key = Some(key);
+        }
+    
+        fn get_state_manager(&self) -> Weak<RefCell<StateManager>> {
+            return self.widget_data.state_manager.clone();
+        }
+    
+        fn set_state_manager(&mut self, state_manager: Weak<RefCell<StateManager>>) -> () {
+            self.widget_data.state_manager = state_manager;
+        }
+        
+        fn get_position(&self) -> &Position {
+            return &self.widget_data.position;
+        }
+    
+        fn set_position(&mut self, position: Position) -> () {
+            self.widget_data.position = position;
+        }
+    
+        fn get_available_space(&self) -> &Size {
+            return &self.widget_data.available_space;
+        }
+    
+        fn set_available_space(&mut self, available_space: Size) -> () {
+            self.widget_data.available_space = available_space;
+        }
+    
+    }
+}
+
+#[macro_export]
+macro_rules! compound_widget_default_methods {
+    () => {
+        
+        widget_default_methods!();
+
+        fn get_cached_build_mut(&mut self) -> Option<&mut dyn Widget> {
+            return match &mut self.widget_data.cached_build {
+                Some(x) => Some(x.as_mut()),
+                None => None,
+            };
+        }
+    
+        fn get_cached_build(&self) -> Option<&dyn Widget> {
+            return match &self.widget_data.cached_build {
+                Some(x) => Some(x.as_ref()),
+                None => None,
+            };
+        }
+    
+        fn set_cached_build(&mut self, cached_build: Box<dyn Widget>) -> () {
+            self.widget_data.cached_build = Some(cached_build);
+        }
+        
+    }
+}
+
+#[macro_export]
+macro_rules! widget_default_fields {
+    () => {
+        key: Option<Key>,
+        #[derivative(Debug="ignore")]
+        state_manager: Weak<RefCell<StateManager>>,
+        position: Position,
+        available_space: Size,    
+    };
+}
+
+#[macro_export]
+macro_rules! compound_widget_default_fields {
+    () => {
+        widget_default_fields!();
+        cached_build: Option<Box<dyn Widget>>,
+    };
 }

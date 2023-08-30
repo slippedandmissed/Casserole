@@ -2,10 +2,10 @@ use std::{rc::Weak, cell::RefCell};
 
 use crate::{
     graphics::{Position, Size},
-    platform::Platform, state::StateManager,
+    platform::Platform, state::StateManager, widget_default_methods,
 };
 
-use super::{Widget, Key, KeySegment};
+use super::{Widget, Key, KeySegment, WidgetData};
 
 #[derive(Debug)]
 pub enum MainAxisAlignment {
@@ -41,17 +41,10 @@ pub enum ListDirection {
     Row,
 }
 
-use derivative::Derivative;
 
-#[derive(Derivative)]
-#[derivative(Debug)]
+#[derive(Debug)]
 pub struct List {
-    key: Option<Key>,
-    #[derivative(Debug = "ignore")]
-    state_manager: Weak<RefCell<StateManager>>,
-    position: Position,
-    available_space: Size,
-
+    widget_data: WidgetData,
     direction: ListDirection,
     main_axis_alignment: MainAxisAlignment,
     cross_axis_alignment: CrossAxisAlignment,
@@ -70,10 +63,7 @@ impl List {
         children: Vec<Box<dyn Widget>>,
     ) -> Box<Self> {
         return Box::new(Self {
-            key: None,
-            state_manager: Weak::new(),
-            position: Position::origin(),
-            available_space: Size::zero(),
+            widget_data: WidgetData::new(),
             direction,
             main_axis_alignment,
             cross_axis_alignment,
@@ -91,49 +81,16 @@ impl KeySegment for List {
 }
 
 impl Widget for List {
-    fn get_key(&self) -> &Key {
-        return match &self.key {
-            Some(x) => x,
-            None => panic!()
-        };
-    }
-
-    fn set_key(&mut self, key: Key) -> () {
-        self.key = Some(key);
-    }
-    
-    fn get_state_manager(&self) -> Weak<RefCell<StateManager>> {
-        return self.state_manager.clone();
-    }
-
-    fn set_state_manager(&mut self, state_manager: Weak<RefCell<StateManager>>) -> () {
-        self.state_manager = state_manager;
-    }
-
-    fn get_position(&self) -> &Position {
-        return &self.position;
-    }
-
-    fn set_position(&mut self, position: Position) -> () {
-        self.position = position;
-    }
-
-    fn get_available_space(&self) -> &Size {
-        return &self.available_space;
-    }
-
-    fn set_available_space(&mut self, available_space: Size) -> () {
-        self.available_space = available_space;
-    }
+    widget_default_methods!();
 
     fn set_layout(&mut self, position: Position, available_space: Size) {
-        self.position = position;
-        self.available_space = available_space;
+        self.widget_data.position = position;
+        self.widget_data.available_space = available_space;
 
         let mut child_sizes: Vec<Size> = self
             .children
             .iter()
-            .map(|child| child.get_size(&self.available_space))
+            .map(|child| child.get_size(&self.widget_data.available_space))
             .collect();
 
         let mut total_child_size = child_sizes
@@ -160,12 +117,12 @@ impl Widget for List {
             if child.does_expand() {
                 match &self.direction {
                     ListDirection::Column => {
-                        child_sizes[i].height = self.available_space.height - total_child_size.height + child_sizes[i].height;
-                        total_child_size.height = self.available_space.height;
+                        child_sizes[i].height = self.widget_data.available_space.height - total_child_size.height + child_sizes[i].height;
+                        total_child_size.height = self.widget_data.available_space.height;
                     }
                     ListDirection::Row => {
-                        child_sizes[i].width = self.available_space.width - total_child_size.width + child_sizes[i].width;
-                        total_child_size.width = self.available_space.width;
+                        child_sizes[i].width = self.widget_data.available_space.width - total_child_size.width + child_sizes[i].width;
+                        total_child_size.width = self.widget_data.available_space.width;
                     }
                 }
                 break;
@@ -181,14 +138,14 @@ impl Widget for List {
             ListDirection::Column => {
                 total_child_main_axis_size = total_child_size.height;
                 total_child_cross_axis_size = total_child_size.width;
-                main_axis_available_space = self.available_space.height;
-                cross_axis_available_space = self.available_space.width;
+                main_axis_available_space = self.widget_data.available_space.height;
+                cross_axis_available_space = self.widget_data.available_space.width;
             }
             ListDirection::Row => {
                 total_child_main_axis_size = total_child_size.width;
                 total_child_cross_axis_size = total_child_size.height;
-                main_axis_available_space = self.available_space.width;
-                cross_axis_available_space = self.available_space.height;
+                main_axis_available_space = self.widget_data.available_space.width;
+                cross_axis_available_space = self.widget_data.available_space.height;
             }
         };
         let main_axis_real_size = match self.main_axis_size {
@@ -292,7 +249,7 @@ impl Widget for List {
 
     fn draw(&self, parent_position: Position, platform: &dyn Platform) -> () {
         for child in &self.children {
-            child.draw(parent_position.clone() + self.position.clone(), platform);
+            child.draw(parent_position.clone() + self.widget_data.position.clone(), platform);
         }
     }
 
