@@ -1,14 +1,10 @@
-use casserole_core::event_handlers;
 use casserole_core::graphics::{Color as CasseroleColor, GraphicsLibrary, Position, Size};
 use crossbeam_channel::{unbounded, Receiver, Sender};
-use once_cell::sync::Lazy;
 use sdl2::event::{Event, WindowEvent};
 use sdl2::pixels::Color;
 use sdl2::rect::Rect;
 use std::thread;
 use std::time::Duration;
-
-use crate::PLATFORM;
 
 #[derive(Clone, Debug)]
 pub enum DrawCommand {
@@ -19,6 +15,13 @@ pub enum DrawCommand {
     UpdateDisplay,
 }
 
+#[derive(Clone, Debug)]
+pub enum EventData {
+    Quit,
+    WindowResize,
+    MouseMove(Position),
+}
+
 pub struct SDL2GraphicsLibrary {
     pub get_screen_dims_sender: Sender<()>,
     pub get_screen_dims_receiver: Receiver<()>,
@@ -27,16 +30,21 @@ pub struct SDL2GraphicsLibrary {
 
     pub draw_sender: Sender<DrawCommand>,
     pub draw_receiver: Receiver<DrawCommand>,
+    pub event_sender: Sender<EventData>,
+    pub event_receiver: Receiver<EventData>,
 }
 
 impl SDL2GraphicsLibrary {
     pub fn new() -> Self {
         let (draw_sender, draw_receiver) = unbounded();
+        let (event_sender, event_receiver) = unbounded();
         let (get_screen_dims_sender, get_screen_dims_receiver) = unbounded();
         let (screen_dims_sender, screen_dims_receiver) = unbounded();
         return Self {
             draw_sender,
             draw_receiver,
+            event_sender,
+            event_receiver,
             get_screen_dims_sender,
             get_screen_dims_receiver,
             screen_dims_sender,
@@ -48,6 +56,7 @@ impl SDL2GraphicsLibrary {
         let draw_receiver = self.draw_receiver.clone();
         let get_screen_dims_receiver = self.get_screen_dims_receiver.clone();
         let screen_dims_sender = self.screen_dims_sender.clone();
+        let event_sender = self.event_sender.clone();
         thread::spawn(move || {
             let sdl_context = sdl2::init().unwrap();
             let video_subsystem = sdl_context.video().unwrap();
@@ -73,8 +82,25 @@ impl SDL2GraphicsLibrary {
                 for event in event_pump.poll_iter() {
                     match event {
                         Event::Quit { .. } => {
-                            event_handlers::on_quit();
+                            event_sender.send(EventData::Quit).unwrap();
                             break 'running;
+                        }
+                        Event::MouseMotion {
+                            timestamp: _timestamp,
+                            window_id: _window_id,
+                            which: _which,
+                            mousestate: _mousestate,
+                            x,
+                            y,
+                            xrel: _xrel,
+                            yrel: _yrel,
+                        } => {
+                            event_sender
+                                .send(EventData::MouseMove(Position {
+                                    x: x as f64,
+                                    y: y as f64,
+                                }))
+                                .unwrap();
                         }
                         Event::Window {
                             timestamp: _timestamp,
@@ -89,9 +115,7 @@ impl SDL2GraphicsLibrary {
                                         u32::try_from(new_height).unwrap(),
                                     )
                                     .unwrap();
-                                thread::spawn(|| {
-                                    event_handlers::on_window_resize(&PLATFORM);
-                                });
+                                event_sender.send(EventData::WindowResize).unwrap();
                             }
                             _ => (),
                         },
@@ -114,10 +138,10 @@ impl SDL2GraphicsLibrary {
                                 .with_texture_canvas(&mut texture, |texture_canvas| {
                                     texture_canvas
                                         .fill_rect(Rect::new(
-                                            position.x,
-                                            position.y,
-                                            size.width,
-                                            size.height,
+                                            position.x as i32,
+                                            position.y as i32,
+                                            size.width as u32,
+                                            size.height as u32,
                                         ))
                                         .unwrap();
                                 })
@@ -133,8 +157,8 @@ impl SDL2GraphicsLibrary {
                     let size: (u32, u32) = canvas.output_size().unwrap();
                     screen_dims_sender
                         .send(Size {
-                            width: size.0,
-                            height: size.1,
+                            width: size.0 as f64,
+                            height: size.1 as f64,
                         })
                         .unwrap();
                 }
@@ -148,16 +172,25 @@ impl SDL2GraphicsLibrary {
 }
 
 impl GraphicsLibrary for SDL2GraphicsLibrary {
-    fn fill(&self, color: CasseroleColor) {
-        self.fill_rect(Position { x: 0, y: 0 }, self.get_screen_dimensions(), color);
+    fn fill(&self, color: &CasseroleColor) {
+        self.fill_rect(
+            &Position { x: 0., y: 0. },
+            &self.get_screen_dimensions(),
+            &color,
+        );
     }
 
-    fn fill_rect(&self, position: Position, size: Size, color: CasseroleColor) {
+    fn fill_rect(&self, position: &Position, size: &Size, color: &CasseroleColor) {
         self.draw_sender
-            .send(DrawCommand::SetDrawColor { color })
+            .send(DrawCommand::SetDrawColor {
+                color: color.clone(),
+            })
             .unwrap();
         self.draw_sender
-            .send(DrawCommand::FillRect { position, size })
+            .send(DrawCommand::FillRect {
+                position: position.clone(),
+                size: size.clone(),
+            })
             .unwrap();
     }
 
@@ -170,5 +203,3 @@ impl GraphicsLibrary for SDL2GraphicsLibrary {
         self.draw_sender.send(DrawCommand::UpdateDisplay).unwrap();
     }
 }
-
-pub static GRAPHICS_LIBRARY: Lazy<SDL2GraphicsLibrary> = Lazy::new(|| SDL2GraphicsLibrary::new());

@@ -6,5 +6,3 @@ impl Logger for SDL2Logger {
         println!("{}", msg);
     }
 }
-
-pub const LOGGER: SDL2Logger = SDL2Logger {};
