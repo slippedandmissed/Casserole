@@ -11,3 +11,4 @@ repository = "https://github.com/slippedandmissed/Casserole"
 crate-type = ["rlib"]
 
 [dependencies]
+derivative = "2.2.0"

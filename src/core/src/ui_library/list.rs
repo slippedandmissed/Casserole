@@ -1,9 +1,11 @@
+use std::{rc::Weak, cell::RefCell};
+
 use crate::{
     graphics::{Position, Size},
-    platform::Platform,
+    platform::Platform, state::StateManager,
 };
 
-use super::Widget;
+use super::{Widget, Key, KeySegment};
 
 #[derive(Debug)]
 pub enum MainAxisAlignment {
@@ -39,16 +41,23 @@ pub enum ListDirection {
     Row,
 }
 
-#[derive(Debug)]
+use derivative::Derivative;
+
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct List {
-    pub position: Position,
-    pub available_space: Size,
-    pub direction: ListDirection,
-    pub main_axis_alignment: MainAxisAlignment,
-    pub cross_axis_alignment: CrossAxisAlignment,
-    pub main_axis_size: MainAxisSize,
-    pub cross_axis_size: CrossAxisSize,
-    pub children: Vec<Box<dyn Widget>>,
+    key: Option<Key>,
+    #[derivative(Debug = "ignore")]
+    state_manager: Weak<RefCell<StateManager>>,
+    position: Position,
+    available_space: Size,
+
+    direction: ListDirection,
+    main_axis_alignment: MainAxisAlignment,
+    cross_axis_alignment: CrossAxisAlignment,
+    main_axis_size: MainAxisSize,
+    cross_axis_size: CrossAxisSize,
+    children: Vec<Box<dyn Widget>>,
 }
 
 impl List {
@@ -61,6 +70,8 @@ impl List {
         children: Vec<Box<dyn Widget>>,
     ) -> Box<Self> {
         return Box::new(Self {
+            key: None,
+            state_manager: Weak::new(),
             position: Position::origin(),
             available_space: Size::zero(),
             direction,
@@ -73,7 +84,32 @@ impl List {
     }
 }
 
+impl KeySegment for List {
+    fn key_segment(&self) -> String {
+        return "List".to_string();
+    }
+}
+
 impl Widget for List {
+    fn get_key(&self) -> &Key {
+        return match &self.key {
+            Some(x) => x,
+            None => panic!()
+        };
+    }
+
+    fn set_key(&mut self, key: Key) -> () {
+        self.key = Some(key);
+    }
+    
+    fn get_state_manager(&self) -> Weak<RefCell<StateManager>> {
+        return self.state_manager.clone();
+    }
+
+    fn set_state_manager(&mut self, state_manager: Weak<RefCell<StateManager>>) -> () {
+        self.state_manager = state_manager;
+    }
+
     fn get_position(&self) -> &Position {
         return &self.position;
     }

@@ -1,17 +1,26 @@
+use std::{rc::Weak, cell::RefCell};
+
 use crate::{
     graphics::{Color, Position, Size},
     ui_library::{
-        container::Container, expanded::Expanded, sized_box::SizedBox, CompoundWidget, Widget,
-    },
+        container::Container, expanded::Expanded, sized_box::SizedBox, CompoundWidget, Widget, Key, KeySegment,
+    }, state::StateManager,
 };
 
 use super::hoverable::Hoverable;
 
-#[derive(Debug)]
+use derivative::Derivative;
+
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct Button {
+    key: Option<Key>,
+    #[derivative(Debug="ignore")]
+    state_manager: Weak<RefCell<StateManager>>,
     cached_build: Option<Box<dyn Widget>>,
     position: Position,
     available_space: Size,
+
     background_color: Color,
     hovered_background_color: Color,
 }
@@ -19,6 +28,8 @@ pub struct Button {
 impl Button {
     pub fn new() -> Box<Self> {
         return Box::new(Self {
+            key: None,
+            state_manager: Weak::new(),
             cached_build: None,
             position: Position::origin(),
             available_space: Size::zero(),
@@ -32,7 +43,32 @@ impl Button {
     }
 }
 
+impl KeySegment for Button {
+    fn key_segment(&self) -> String {
+        return "Button".to_string();
+    }
+}
+
 impl CompoundWidget for Button {
+    fn get_key(&self) -> &Key {
+        return match &self.key {
+            Some(x) => x,
+            None => panic!()
+        };
+    }
+
+    fn set_key(&mut self, key: Key) -> () {
+        self.key = Some(key);
+    }
+
+    fn get_state_manager(&self) -> Weak<RefCell<StateManager>> {
+        return self.state_manager.clone();
+    }
+
+    fn set_state_manager(&mut self, state_manager: Weak<RefCell<StateManager>>) -> () {
+        self.state_manager = state_manager;
+    }
+
     fn get_cached_build_mut(&mut self) -> Option<&mut dyn Widget> {
         return match &mut self.cached_build {
             Some(x) => Some(x.as_mut()),

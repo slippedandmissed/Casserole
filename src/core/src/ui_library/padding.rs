@@ -1,9 +1,12 @@
+use std::{rc::Weak, cell::RefCell};
+
 use crate::{
     graphics::{Position, Size},
     platform::Platform,
+    state::StateManager,
 };
 
-use super::Widget;
+use super::{Key, KeySegment, Widget};
 
 #[derive(Clone, Debug)]
 pub struct Inset {
@@ -33,17 +36,26 @@ impl Inset {
     }
 }
 
-#[derive(Debug)]
+use derivative::Derivative;
+
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct Padding {
-    pub position: Position,
-    pub available_space: Size,
-    pub padding: Inset,
-    pub child: Option<Box<dyn Widget>>,
+    key: Option<Key>,
+    #[derivative(Debug = "ignore")]
+    state_manager: Weak<RefCell<StateManager>>,
+    position: Position,
+    available_space: Size,
+
+    padding: Inset,
+    child: Option<Box<dyn Widget>>,
 }
 
 impl Padding {
     pub fn new(padding: Inset, child: Option<Box<dyn Widget>>) -> Box<Self> {
         return Box::new(Self {
+            key: None,
+            state_manager: Weak::new(),
             position: Position::origin(),
             available_space: Size::zero(),
             padding,
@@ -59,7 +71,32 @@ impl Padding {
     }
 }
 
+impl KeySegment for Padding {
+    fn key_segment(&self) -> String {
+        return "Padding".to_string();
+    }
+}
+
 impl Widget for Padding {
+    fn get_key(&self) -> &Key {
+        return match &self.key {
+            Some(x) => x,
+            None => panic!(),
+        };
+    }
+
+    fn set_key(&mut self, key: Key) -> () {
+        self.key = Some(key);
+    }
+    
+    fn get_state_manager(&self) -> Weak<RefCell<StateManager>> {
+        return self.state_manager.clone();
+    }
+
+    fn set_state_manager(&mut self, state_manager: Weak<RefCell<StateManager>>) -> () {
+        self.state_manager = state_manager;
+    }
+
     fn get_position(&self) -> &Position {
         return &self.position;
     }

@@ -1,18 +1,29 @@
-use crate::graphics::{Position, Size};
+use std::{rc::Weak, cell::RefCell};
 
-use super::Widget;
+use crate::{graphics::{Position, Size}, state::StateManager};
 
-#[derive(Debug)]
+use super::{Widget, Key, KeySegment};
+
+use derivative::Derivative;
+
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct SizedBox {
-    pub position: Position,
-    pub available_space: Size,
-    pub size: Size,
-    pub child: Box<dyn Widget>,
+    key: Option<Key>,
+    #[derivative(Debug = "ignore")]
+    state_manager: Weak<RefCell<StateManager>>,
+    position: Position,
+    available_space: Size,
+
+    size: Size,
+    child: Box<dyn Widget>,
 }
 
 impl SizedBox {
     pub fn new(size: Size, child: Box<dyn Widget>) -> Box<Self> {
         return Box::new(Self {
+            key: None,
+            state_manager: Weak::new(),
             position: Position::origin(),
             available_space: Size::zero(),
             size,
@@ -21,7 +32,32 @@ impl SizedBox {
     }
 }
 
+impl KeySegment for SizedBox {
+    fn key_segment(&self) -> String {
+        return "SizedBox".to_string();
+    }
+}
+
 impl Widget for SizedBox {
+    fn get_key(&self) -> &Key {
+        return match &self.key {
+            Some(x) => x,
+            None => panic!()
+        };
+    }
+
+    fn set_key(&mut self, key: Key) -> () {
+        self.key = Some(key);
+    }
+    
+    fn get_state_manager(&self) -> Weak<RefCell<StateManager>> {
+        return self.state_manager.clone();
+    }
+
+    fn set_state_manager(&mut self, state_manager: Weak<RefCell<StateManager>>) -> () {
+        self.state_manager = state_manager;
+    }
+
     fn get_position(&self) -> &Position {
         return &self.position;
     }

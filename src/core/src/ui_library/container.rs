@@ -1,18 +1,31 @@
-use crate::graphics::{Color, Position, Size};
+use std::{rc::Weak, cell::RefCell};
 
-use super::Widget;
+use crate::{
+    graphics::{Color, Position, Size},
+    state::StateManager,
+};
 
-#[derive(Debug)]
+use super::{Key, KeySegment, Widget};
+
+use derivative::Derivative;
+
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct Container {
-    pub position: Position,
-    pub available_space: Size,
-    pub background: Color,
-    pub child: Box<dyn Widget>,
+    key: Option<Key>,
+    #[derivative(Debug = "ignore")]
+    state_manager: Weak<RefCell<StateManager>>,
+    position: Position,
+    available_space: Size,
+    background: Color,
+    child: Box<dyn Widget>,
 }
 
 impl Container {
     pub fn new(background: Color, child: Box<dyn Widget>) -> Box<Self> {
         return Box::new(Self {
+            key: None,
+            state_manager: Weak::new(),
             position: Position::origin(),
             available_space: Size::zero(),
             background: background,
@@ -21,7 +34,32 @@ impl Container {
     }
 }
 
+impl KeySegment for Container {
+    fn key_segment(&self) -> String {
+        return "Container".to_string();
+    }
+}
+
 impl Widget for Container {
+    fn get_key(&self) -> &Key {
+        return match &self.key {
+            Some(x) => x,
+            None => panic!(),
+        };
+    }
+
+    fn set_key(&mut self, key: Key) -> () {
+        self.key = Some(key);
+    }
+
+    fn get_state_manager(&self) -> Weak<RefCell<StateManager>> {
+        return self.state_manager.clone();
+    }
+
+    fn set_state_manager(&mut self, state_manager: Weak<RefCell<StateManager>>) -> () {
+        self.state_manager = state_manager;
+    }
+
     fn get_position(&self) -> &Position {
         return &self.position;
     }
@@ -41,7 +79,8 @@ impl Widget for Container {
     fn set_layout(&mut self, position: Position, available_space: Size) {
         self.position = position;
         self.available_space = available_space;
-        self.child.set_layout(Position::origin(), self.available_space.clone());
+        self.child
+            .set_layout(Position::origin(), self.available_space.clone());
     }
 
     fn draw(&self, parent_position: Position, platform: &dyn crate::platform::Platform) -> () {
@@ -50,10 +89,8 @@ impl Widget for Container {
             &self.child.get_size(&self.available_space),
             &self.background,
         );
-        self.child.draw(
-            parent_position + self.position.clone(),
-            platform,
-        );
+        self.child
+            .draw(parent_position + self.position.clone(), platform);
     }
 
     fn get_width(&self, available_space: &Size) -> f64 {

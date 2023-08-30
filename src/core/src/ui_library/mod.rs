@@ -5,15 +5,30 @@ pub mod list;
 pub mod padding;
 pub mod sized_box;
 
-use std::fmt::Debug;
+use std::{cell::RefCell, fmt::Debug, rc::Weak};
 
 use crate::{
     event_handlers::HandledEventInfo,
     graphics::{Position, Size},
     platform::Platform,
+    state::{State, StateManager},
 };
 
-pub trait Widget: Debug {
+#[derive(Debug, Clone, Hash, PartialEq, Eq)]
+pub struct Key {
+    pub value: String,
+}
+
+pub trait KeySegment {
+    fn key_segment(&self) -> String;
+}
+
+pub trait Widget: Debug + KeySegment {
+    fn get_key(&self) -> &Key;
+    fn set_key(&mut self, key: Key) -> ();
+    fn get_state_manager(&self) -> Weak<RefCell<StateManager>>;
+    fn set_state_manager(&mut self, state_manager: Weak<RefCell<StateManager>>) -> ();
+
     fn get_position(&self) -> &Position;
     fn set_position(&mut self, position: Position) -> ();
     fn get_available_space(&self) -> &Size;
@@ -57,10 +72,33 @@ pub trait Widget: Debug {
     }
 
     fn rebuild(&mut self) -> () {
-        let build = self.build();
+        let build: Option<Box<dyn Widget>> = self.build();
         self.set_cached_build(build);
-        for child in self.get_children_mut() {
-            child.rebuild()
+        let my_key = self.get_key().clone();
+        let state_manager = self.get_state_manager();
+        for (i, child) in self.get_children_mut().iter_mut().enumerate() {
+            let mut new_parent_key_value = my_key.value.clone();
+            new_parent_key_value.push_str(&format!("/{}", i));
+            child.rebuild_with_key(new_parent_key_value, state_manager.clone());
+        }
+    }
+
+    fn rebuild_with_key(
+        &mut self,
+        parent_key_value: String,
+        state_manager: Weak<RefCell<StateManager>>,
+    ) -> () {
+        self.set_state_manager(state_manager.clone());
+        let mut my_key = parent_key_value.clone();
+        my_key.push_str(&format!("/{}", self.key_segment()));
+        let my_key = Key { value: my_key };
+        self.set_key(my_key.clone());
+        let build: Option<Box<dyn Widget>> = self.build();
+        self.set_cached_build(build);
+        for (i, child) in self.get_children_mut().iter_mut().enumerate() {
+            let mut new_parent_key_value = my_key.value.clone();
+            new_parent_key_value.push_str(&format!("/{}", i));
+            child.rebuild_with_key(new_parent_key_value, state_manager.clone());
         }
     }
 
@@ -106,14 +144,22 @@ pub trait Widget: Debug {
 }
 
 pub trait CompoundWidget: Widget {
+    fn get_key(&self) -> &Key;
+    fn set_key(&mut self, key: Key) -> ();
+    fn get_state_manager(&self) -> Weak<RefCell<StateManager>>;
+    fn set_state_manager(&mut self, state_manager: Weak<RefCell<StateManager>>) -> ();
+
     fn get_position(&self) -> &Position;
     fn set_position(&mut self, position: Position) -> ();
     fn get_available_space(&self) -> &Size;
     fn set_available_space(&mut self, available_space: Size) -> ();
+
     fn get_cached_build(&self) -> Option<&dyn Widget>;
     fn get_cached_build_mut(&mut self) -> Option<&mut dyn Widget>;
     fn set_cached_build(&mut self, cached_build: Box<dyn Widget>) -> ();
+
     fn build(&self) -> Box<dyn Widget>;
+
     fn on_mouse_move(
         &mut self,
         _mouse_pos: &Position,
@@ -125,6 +171,19 @@ pub trait CompoundWidget: Widget {
 }
 
 impl<T: CompoundWidget> Widget for T {
+    fn get_key(&self) -> &Key {
+        return CompoundWidget::get_key(self);
+    }
+    fn set_key(&mut self, key: Key) -> () {
+        return CompoundWidget::set_key(self, key);
+    }
+    fn get_state_manager(&self) -> Weak<RefCell<StateManager>> {
+        return CompoundWidget::get_state_manager(self);
+    }
+    fn set_state_manager(&mut self, state_manager: Weak<RefCell<StateManager>>) -> () {
+        return CompoundWidget::set_state_manager(self, state_manager);
+    }
+
     fn get_position(&self) -> &Position {
         return CompoundWidget::get_position(self);
     }
@@ -207,5 +266,126 @@ impl<T: CompoundWidget> Widget for T {
         handled_event_info: &mut HandledEventInfo,
     ) -> bool {
         return CompoundWidget::on_mouse_move(self, mouse_pos, platform, handled_event_info);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct StatefulWidgetEventHandlerInfo {
+    pub was_captured: bool,
+    pub needs_rebuild: bool,
+}
+
+impl StatefulWidgetEventHandlerInfo {
+    pub fn new() -> Self {
+        return Self {
+            was_captured: false,
+            needs_rebuild: false,
+        };
+    }
+}
+
+pub trait StatefulWidget: CompoundWidget {
+    type T: State;
+
+    fn get_key(&self) -> &Key;
+    fn set_key(&mut self, key: Key) -> ();
+    fn get_state_manager(&self) -> Weak<RefCell<StateManager>>;
+    fn set_state_manager(&mut self, state_manager: Weak<RefCell<StateManager>>) -> ();
+
+    fn get_position(&self) -> &Position;
+    fn set_position(&mut self, position: Position) -> ();
+    fn get_available_space(&self) -> &Size;
+    fn set_available_space(&mut self, available_space: Size) -> ();
+
+    fn get_cached_build(&self) -> Option<&dyn Widget>;
+    fn get_cached_build_mut(&mut self) -> Option<&mut dyn Widget>;
+    fn set_cached_build(&mut self, cached_build: Box<dyn Widget>) -> ();
+
+    fn build(&self, state: &mut Self::T) -> Box<dyn Widget>;
+
+    fn state_factory(&self) -> Box<Self::T>;
+
+    fn on_mouse_move(
+        &mut self,
+        _state: &mut Self::T,
+        _mouse_pos: &Position,
+        _platform: &dyn Platform,
+        _handled_event_info: &mut HandledEventInfo,
+    ) -> StatefulWidgetEventHandlerInfo {
+        return StatefulWidgetEventHandlerInfo::new();
+    }
+}
+
+impl<U: StatefulWidget> CompoundWidget for U {
+    fn get_key(&self) -> &Key {
+        return StatefulWidget::get_key(self);
+    }
+    fn set_key(&mut self, key: Key) -> () {
+        return StatefulWidget::set_key(self, key);
+    }
+    fn get_state_manager(&self) -> Weak<RefCell<StateManager>> {
+        return StatefulWidget::get_state_manager(self);
+    }
+    fn set_state_manager(&mut self, state_manager: Weak<RefCell<StateManager>>) -> () {
+        return StatefulWidget::set_state_manager(self, state_manager);
+    }
+
+    fn get_position(&self) -> &Position {
+        return StatefulWidget::get_position(self);
+    }
+
+    fn set_position(&mut self, position: Position) -> () {
+        return StatefulWidget::set_position(self, position);
+    }
+
+    fn get_available_space(&self) -> &Size {
+        return StatefulWidget::get_available_space(self);
+    }
+
+    fn set_available_space(&mut self, available_space: Size) -> () {
+        return StatefulWidget::set_available_space(self, available_space);
+    }
+
+    fn get_cached_build(&self) -> Option<&dyn Widget> {
+        return StatefulWidget::get_cached_build(self);
+    }
+
+    fn get_cached_build_mut(&mut self) -> Option<&mut dyn Widget> {
+        return StatefulWidget::get_cached_build_mut(self);
+    }
+
+    fn set_cached_build(&mut self, cached_build: Box<dyn Widget>) -> () {
+        StatefulWidget::set_cached_build(self, cached_build);
+    }
+
+    fn build(&self) -> Box<dyn Widget> {
+        let state_manager_rc = Weak::upgrade(&CompoundWidget::get_state_manager(self)).unwrap();
+        let mut state_manager = (*state_manager_rc).borrow_mut();
+        let state =
+            state_manager.get_state(CompoundWidget::get_key(self), &|| self.state_factory());
+        return StatefulWidget::build(self, state);
+    }
+
+    fn on_mouse_move(
+        &mut self,
+        mouse_pos: &Position,
+        platform: &dyn Platform,
+        handled_event_info: &mut HandledEventInfo,
+    ) -> bool {
+        let handler_info: StatefulWidgetEventHandlerInfo;
+        {
+            let state_manager_rc = Weak::upgrade(&CompoundWidget::get_state_manager(self)).unwrap();
+            let mut state_manager = (*state_manager_rc).borrow_mut();
+            let state =
+                state_manager.get_state(CompoundWidget::get_key(self), &|| self.state_factory());
+
+            handler_info =
+                StatefulWidget::on_mouse_move(self, state, mouse_pos, platform, handled_event_info)
+        }
+        if handler_info.needs_rebuild {
+            self.rebuild();
+        }
+
+        return handler_info.was_captured;
     }
 }
