@@ -4,9 +4,11 @@ use crate::{
     event_handlers::HandledEventInfo,
     graphics::{Position, Size},
     state::{State, StateManager},
-    ui_library::{Key, KeySegment, StatefulWidget, StatefulWidgetEventHandlerInfo, Widget, CompoundWidgetData}, widget_default_methods, compound_widget_default_methods,
+    ui_library::{Key, StatefulWidget, StatefulWidgetEventHandlerInfo, Widget, CompoundWidgetData}, widget_default_methods, compound_widget_default_methods,
 };
 use derivative::Derivative;
+use key_segment::KeySegment;
+use key_segment_derive::KeySegment;
 
 pub struct HoverableState {
     is_hovered: bool,
@@ -20,7 +22,7 @@ impl HoverableState {
 
 impl State for HoverableState {}
 
-#[derive(Derivative)]
+#[derive(Derivative, KeySegment)]
 #[derivative(Debug)]
 pub struct Hoverable {
     widget_data: CompoundWidgetData,
@@ -35,12 +37,6 @@ impl Hoverable {
             widget_data: CompoundWidgetData::new(),
             child,
         });
-    }
-}
-
-impl KeySegment for Hoverable {
-    fn key_segment(&self) -> String {
-        return "Hoverable".to_string();
     }
 }
 

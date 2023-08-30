@@ -12,3 +12,5 @@ crate-type = ["rlib"]
 
 [dependencies]
 derivative = "2.2.0"
+key_segment = { path = "./key_segment" }
+key_segment_derive = { path = "./key_segment/key_segment_derive" }

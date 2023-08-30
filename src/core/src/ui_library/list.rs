@@ -1,11 +1,16 @@
-use std::{rc::Weak, cell::RefCell};
+use std::{cell::RefCell, rc::Weak};
 
 use crate::{
     graphics::{Position, Size},
-    platform::Platform, state::StateManager, widget_default_methods,
+    platform::Platform,
+    state::StateManager,
+    widget_default_methods,
 };
 
-use super::{Widget, Key, KeySegment, WidgetData};
+use super::{Key, Widget, WidgetData};
+
+use key_segment::KeySegment;
+use key_segment_derive::KeySegment;
 
 #[derive(Debug)]
 pub enum MainAxisAlignment {
@@ -41,8 +46,7 @@ pub enum ListDirection {
     Row,
 }
 
-
-#[derive(Debug)]
+#[derive(Debug, KeySegment)]
 pub struct List {
     widget_data: WidgetData,
     direction: ListDirection,
@@ -71,12 +75,6 @@ impl List {
             cross_axis_size,
             children,
         });
-    }
-}
-
-impl KeySegment for List {
-    fn key_segment(&self) -> String {
-        return "List".to_string();
     }
 }
 
@@ -117,11 +115,15 @@ impl Widget for List {
             if child.does_expand() {
                 match &self.direction {
                     ListDirection::Column => {
-                        child_sizes[i].height = self.widget_data.available_space.height - total_child_size.height + child_sizes[i].height;
+                        child_sizes[i].height = self.widget_data.available_space.height
+                            - total_child_size.height
+                            + child_sizes[i].height;
                         total_child_size.height = self.widget_data.available_space.height;
                     }
                     ListDirection::Row => {
-                        child_sizes[i].width = self.widget_data.available_space.width - total_child_size.width + child_sizes[i].width;
+                        child_sizes[i].width = self.widget_data.available_space.width
+                            - total_child_size.width
+                            + child_sizes[i].width;
                         total_child_size.width = self.widget_data.available_space.width;
                     }
                 }
@@ -249,7 +251,10 @@ impl Widget for List {
 
     fn draw(&self, parent_position: Position, platform: &dyn Platform) -> () {
         for child in &self.children {
-            child.draw(parent_position.clone() + self.widget_data.position.clone(), platform);
+            child.draw(
+                parent_position.clone() + self.widget_data.position.clone(),
+                platform,
+            );
         }
     }
 

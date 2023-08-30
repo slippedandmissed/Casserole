@@ -1,14 +1,16 @@
-use std::{rc::Weak, cell::RefCell};
+use std::{cell::RefCell, rc::Weak};
 
 use crate::{
     graphics::{Color, Position, Size},
-    state::StateManager, widget_default_methods,
+    state::StateManager,
+    widget_default_methods,
 };
 
-use super::{Key, KeySegment, Widget, WidgetData};
+use super::{Key, Widget, WidgetData};
+use key_segment::KeySegment;
+use key_segment_derive::KeySegment;
 
-
-#[derive(Debug)]
+#[derive(Debug, KeySegment)]
 pub struct Container {
     widget_data: WidgetData,
     background: Color,
@@ -22,12 +24,6 @@ impl Container {
             background: background,
             child: child,
         });
-    }
-}
-
-impl KeySegment for Container {
-    fn key_segment(&self) -> String {
-        return "Container".to_string();
     }
 }
 
@@ -47,8 +43,10 @@ impl Widget for Container {
             &self.child.get_size(&self.widget_data.available_space),
             &self.background,
         );
-        self.child
-            .draw(parent_position + self.widget_data.position.clone(), platform);
+        self.child.draw(
+            parent_position + self.widget_data.position.clone(),
+            platform,
+        );
     }
 
     fn get_width(&self, available_space: &Size) -> f64 {

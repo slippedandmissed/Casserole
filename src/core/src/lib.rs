@@ -2,11 +2,11 @@ pub mod event_handlers;
 pub mod graphics;
 pub mod logging;
 pub mod platform;
-pub mod ui_library;
 pub mod state;
+pub mod ui_library;
 
 use std::cell::RefCell;
-use std::rc::{Weak, Rc};
+use std::rc::{Rc, Weak};
 
 use graphics::{Color, Position, Size};
 use state::StateManager;
@@ -15,13 +15,15 @@ use ui_library::container::Container;
 use ui_library::expanded::Expanded;
 use ui_library::padding::{Inset, Padding};
 use ui_library::sized_box::SizedBox;
-use ui_library::{CompoundWidget, Widget, Key, KeySegment, CompoundWidgetData};
+use ui_library::{CompoundWidget, CompoundWidgetData, Key, Widget};
+
+use key_segment::KeySegment;
+use key_segment_derive::KeySegment;
 
 use crate::platform::Platform;
 use crate::ui_library::list::*;
 
-
-#[derive(Debug)]
+#[derive(Debug, KeySegment)]
 pub struct App {
     widget_data: CompoundWidgetData,
 }
@@ -31,12 +33,6 @@ impl App {
         return Self {
             widget_data: CompoundWidgetData::new(),
         };
-    }
-}
-
-impl KeySegment for App {
-    fn key_segment(&self) -> String {
-        return "App".to_string();
     }
 }
 
@@ -80,7 +76,10 @@ impl CompoundWidget for App {
     }
 }
 
-pub struct AppRunner<PlatformType: Platform, AppType> where AppType: Widget{
+pub struct AppRunner<PlatformType: Platform, AppType>
+where
+    AppType: Widget,
+{
     pub platform: PlatformType,
     pub app: AppType,
     pub state_manager: Rc<RefCell<StateManager>>,
@@ -104,13 +103,17 @@ impl<PlatformType: Platform, AppType: Widget> AppRunner<PlatformType, AppType> {
 
 pub fn entry_point<PlatformType: Platform>(platform: PlatformType) -> AppRunner<PlatformType, App> {
     let state_manager = Rc::new(RefCell::new(StateManager::new()));
-    
+
     let mut app = App::new();
     app.rebuild_with_key("".into(), Rc::downgrade(&state_manager));
     app.set_layout(
         Position::origin(),
         platform.graphics().get_screen_dimensions(),
     );
-    let app_runner = AppRunner { platform, app, state_manager };
+    let app_runner = AppRunner {
+        platform,
+        app,
+        state_manager,
+    };
     return app_runner;
 }

@@ -6,6 +6,7 @@ pub mod padding;
 pub mod sized_box;
 
 use derivative::Derivative;
+use key_segment::KeySegment;
 
 use std::{cell::RefCell, fmt::Debug, rc::Weak};
 
@@ -20,11 +21,6 @@ use crate::{
 pub struct Key {
     pub value: String,
 }
-
-pub trait KeySegment {
-    fn key_segment(&self) -> String;
-}
-
 
 #[derive(Derivative)]
 #[derivative(Debug)]

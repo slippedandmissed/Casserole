@@ -3,14 +3,16 @@ use std::{rc::Weak, cell::RefCell};
 use crate::{
     graphics::{Color, Position, Size},
     ui_library::{
-        container::Container, expanded::Expanded, sized_box::SizedBox, CompoundWidget, Widget, Key, KeySegment, CompoundWidgetData,
+        container::Container, expanded::Expanded, sized_box::SizedBox, CompoundWidget, Widget, Key, CompoundWidgetData,
     }, state::StateManager, widget_default_methods, compound_widget_default_methods,
 };
 
 use super::hoverable::Hoverable;
+use key_segment::KeySegment;
+use key_segment_derive::KeySegment;
 
 
-#[derive(Debug)]
+#[derive(Debug, KeySegment)]
 pub struct Button {
     widget_data: CompoundWidgetData,
 
@@ -29,12 +31,6 @@ impl Button {
                 b: 0,
             },
         });
-    }
-}
-
-impl KeySegment for Button {
-    fn key_segment(&self) -> String {
-        return "Button".to_string();
     }
 }
 

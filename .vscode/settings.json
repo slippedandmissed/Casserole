@@ -3,6 +3,10 @@
   "rust-analyzer.linkedProjects": [
     "./src/core/Cargo.toml",
     ".\\src\\core\\Cargo.toml",
+    "./src/core/key_segment/Cargo.toml",
+    ".\\src\\core\\key_segment\\Cargo.toml",
+    "./src/core/key_segment/key_segment_derive/Cargo.toml",
+    ".\\src\\core\\key_segment\\key_segment_derive\\Cargo.toml",
     "./src/wasm-frontend/Cargo.toml",
     ".\\src\\wasm-frontend\\Cargo.toml",
     "./src/sdl2-frontend/Cargo.toml",

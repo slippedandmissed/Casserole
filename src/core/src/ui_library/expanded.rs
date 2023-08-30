@@ -1,11 +1,17 @@
-use std::{rc::Weak, cell::RefCell};
+use std::{cell::RefCell, rc::Weak};
 
-use crate::{graphics::{Position, Size}, state::StateManager, widget_default_methods};
+use crate::{
+    graphics::{Position, Size},
+    state::StateManager,
+    widget_default_methods,
+};
 
-use super::{Widget, Key, KeySegment, WidgetData};
+use super::{Key, Widget, WidgetData};
 
+use key_segment::KeySegment;
+use key_segment_derive::KeySegment;
 
-#[derive(Debug)]
+#[derive(Debug, KeySegment)]
 pub struct Expanded {
     widget_data: WidgetData,
 }
@@ -15,12 +21,6 @@ impl Expanded {
         return Box::new(Self {
             widget_data: WidgetData::new(),
         });
-    }
-}
-
-impl KeySegment for Expanded {
-    fn key_segment(&self) -> String {
-        return "Expanded".to_string();
     }
 }
 

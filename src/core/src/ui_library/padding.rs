@@ -1,12 +1,16 @@
-use std::{rc::Weak, cell::RefCell};
+use std::{cell::RefCell, rc::Weak};
 
 use crate::{
     graphics::{Position, Size},
     platform::Platform,
-    state::StateManager, widget_default_methods,
+    state::StateManager,
+    widget_default_methods,
 };
 
-use super::{Key, KeySegment, Widget, WidgetData};
+use super::{Key, Widget, WidgetData};
+
+use key_segment::KeySegment;
+use key_segment_derive::KeySegment;
 
 #[derive(Clone, Debug)]
 pub struct Inset {
@@ -36,8 +40,7 @@ impl Inset {
     }
 }
 
-
-#[derive(Debug)]
+#[derive(Debug, KeySegment)]
 pub struct Padding {
     widget_data: WidgetData,
     padding: Inset,
@@ -61,19 +64,14 @@ impl Padding {
     }
 }
 
-impl KeySegment for Padding {
-    fn key_segment(&self) -> String {
-        return "Padding".to_string();
-    }
-}
-
 impl Widget for Padding {
     widget_default_methods!();
 
     fn set_layout(&mut self, position: Position, available_space: Size) {
         self.widget_data.position = position;
         self.widget_data.available_space = available_space;
-        let available_space_for_child = self.get_available_space_for_child(&self.widget_data.available_space);
+        let available_space_for_child =
+            self.get_available_space_for_child(&self.widget_data.available_space);
         match &mut self.child {
             Some(child) => child.set_layout(
                 Position {
@@ -88,7 +86,10 @@ impl Widget for Padding {
 
     fn draw(&self, parent_position: Position, platform: &dyn Platform) -> () {
         match &self.child {
-            Some(child) => child.draw(parent_position + self.widget_data.position.clone(), platform),
+            Some(child) => child.draw(
+                parent_position + self.widget_data.position.clone(),
+                platform,
+            ),
             None => (),
         };
     }
